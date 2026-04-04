@@ -1,142 +1,165 @@
 /* ============================================================
-   dashboard.js — Dashboard tab: metric cards + 5 charts
+   dashboard.js — Data Fetching & Chart Rendering
+   Tabs Handled: Dashboard, Model Analysis, Data Pipeline
    ============================================================ */
 
+let charts = {}; // Store chart instances globally to prevent re-init errors
+
+/**
+ * Main initializer for the Dashboard Tab
+ */
 async function initDashboard() {
-  try {
-    const [eda, metrics] = await Promise.all([
-      apiGet("/api/eda"),
-      apiGet("/api/metrics"),
-    ]);
-    renderMetricCards(metrics);
-    renderDashCharts(eda, metrics);
-  } catch (e) {
-    console.error("Dashboard init:", e);
-  }
+    try {
+        const [eda, metrics] = await Promise.all([
+            apiGet("/api/eda"),
+            apiGet("/api/metrics")
+        ]);
+
+        // 1. Update Metric Cards at the top
+        document.querySelector("#mc-rf .mc-val").textContent = metrics.rf.r2.toFixed(4);
+        document.querySelector("#mc-lr .mc-val").textContent = metrics.lr.r2.toFixed(4);
+        document.querySelector("#mc-imp .mc-val").textContent = metrics.improvement + "x";
+        document.querySelector("#mc-dataset .mc-val").textContent = "105,120";
+
+        // 2. Render Dashboard Charts
+        renderHourlyChart(eda);
+        renderJunctionChart(eda);
+
+    } catch (err) {
+        console.error("Dashboard load failed:", err);
+    }
 }
 
-/* ── Metric Cards ─────────────────────────────────────────── */
-function renderMetricCards(m) {
-  const rf = m.rf, lr = m.lr;
-  document.getElementById("mc-dataset").innerHTML =
-    `<div class="mc-lbl">Dataset Size</div>
-     <div class="mc-val" style="color:var(--blu)">105K</div>
-     <div class="mc-sub">rows × 26 features</div>
-     <div class="mc-tag tag-b">2 years · 6 junctions</div>`;
+/**
+ * Main initializer for the Model Analysis Tab
+ */
+async function initModelAnalysis() {
+    try {
+        const data = await apiGet("/api/metrics");
+        
+        // 1. Comparison Chart (RF vs LR)
+        const ctxComp = document.getElementById("c-compare")?.getContext("2d");
+        if (ctxComp) {
+            if (charts.compare) charts.compare.destroy();
+            charts.compare = new Chart(ctxComp, {
+                type: 'bar',
+                data: {
+                    labels: ['Random Forest (RF)', 'Linear Regression (LR)'],
+                    datasets: [{
+                        label: 'Mean Absolute Error (Lower is Better)',
+                        data: [data.rf.mae, data.lr.mae],
+                        backgroundColor: ['#10b981', '#64748b'],
+                        borderRadius: 6
+                    }]
+                },
+                options: chartDefaults({ indexAxis: 'y' })
+            });
+        }
 
-  document.getElementById("mc-rf").innerHTML =
-    `<div class="mc-lbl">RF Accuracy R²</div>
-     <div class="mc-val" style="color:var(--grn)">${(rf.r2*100).toFixed(1)}%</div>
-     <div class="mc-sub">variance explained</div>
-     <div class="mc-tag tag-g">MAE: ${rf.mae} veh/hr</div>`;
+        // 2. Feature Importance Chart (Dynamic)
+        renderFeatureImportance(data.feat_imp);
 
-  document.getElementById("mc-lr").innerHTML =
-    `<div class="mc-lbl">Baseline LR R²</div>
-     <div class="mc-val" style="color:var(--ylw)">${(lr.r2*100).toFixed(1)}%</div>
-     <div class="mc-sub">linear regression</div>
-     <div class="mc-tag tag-y">MAE: ${lr.mae} veh/hr</div>`;
-
-  const imp = m.improvement || (lr.mae / rf.mae).toFixed(1);
-  document.getElementById("mc-imp").innerHTML =
-    `<div class="mc-lbl">Improvement</div>
-     <div class="mc-val" style="color:var(--red)">${imp}×</div>
-     <div class="mc-sub">RF over LR</div>
-     <div class="mc-tag tag-g">RMSE: ${rf.rmse} vs ${lr.rmse}</div>`;
+    } catch (err) {
+        console.error("Model Analysis load failed:", err);
+    }
 }
 
-/* ── Charts ───────────────────────────────────────────────── */
-function renderDashCharts(eda, metrics) {
-  const HOURS  = Array.from({length:24}, (_,i) => i+":00");
-  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const DAYS   = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+/**
+ * Main initializer for the Data Pipeline Tab
+ */
+async function initDataTab() {
+    try {
+        const data = await apiGet("/api/eda");
+        const ctxDist = document.getElementById("c-dist")?.getContext("2d");
+        if (ctxDist) {
+            if (charts.dist) charts.dist.destroy();
+            charts.dist = new Chart(ctxDist, {
+                type: 'bar',
+                data: {
+                    labels: data.dist_labels,
+                    datasets: [{
+                        label: 'Frequency',
+                        data: data.dist_counts,
+                        backgroundColor: '#3b82f6'
+                    }]
+                },
+                options: chartDefaults()
+            });
+        }
+    } catch (err) {
+        console.error("Data tab load failed:", err);
+    }
+}
 
-  // 1) Hourly — weekday vs weekend
-  new Chart(document.getElementById("c-hourly"), {
-    type: "bar",
-    data: {
-      labels: HOURS,
-      datasets: [
-        { label:"Weekday", data: eda.hourly_weekday,
-          backgroundColor:"#4d9fff55", borderColor:"#4d9fff", borderWidth:1 },
-        { label:"Weekend", data: eda.hourly_weekend,
-          backgroundColor:"#9b6dff55", borderColor:"#9b6dff", borderWidth:1 },
-      ],
-    },
-    options: chartDefaults({
-      plugins: { legend:{ display:true, labels:{color:"#8a93aa", font:{size:10}, boxWidth:10} } },
-      scales: {
-        x:{ ticks:{ color:"#50596e", font:{size:9}, maxRotation:0 }, grid:{color:"#1d2535"} },
-        y:{ ticks:{ color:"#50596e", font:{size:10} }, grid:{color:"#1d2535"} },
-      },
-    }),
-  });
+/* ── Individual Chart Renderers ────────────────────────────── */
 
-  // 2) Junction comparison
-  const jNames = Object.values(eda.junction_names);
-  const jVols  = Object.keys(eda.junction_avg).map(k => eda.junction_avg[k]);
-  const jColors = ["#4d9fff","#10d97e","#f5a623","#9b6dff","#ff4d4d","#06b6d4"];
-  new Chart(document.getElementById("c-junc"), {
-    type:"bar",
-    data:{
-      labels: jNames,
-      datasets:[{ data:jVols, backgroundColor:jColors, borderRadius:5, borderWidth:0 }],
-    },
-    options: chartDefaults({ indexAxis:"y" }),
-  });
+function renderHourlyChart(data) {
+    const ctx = document.getElementById("c-hourly")?.getContext("2d");
+    if (!ctx) return;
+    if (charts.hourly) charts.hourly.destroy();
+    charts.hourly = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+            datasets: [
+                { label: 'Weekday', data: data.hourly_weekday, borderColor: '#3b82f6', tension: 0.4 },
+                { label: 'Weekend', data: data.hourly_weekend, borderColor: '#10b981', tension: 0.4 }
+            ]
+        },
+        options: chartDefaults({ plugins: { legend: { display: true } } })
+    });
+}
 
-  // 3) Weather impact
-  const wKeys = Object.keys(eda.weather_avg);
-  const wVals = wKeys.map(k => eda.weather_avg[k]);
-  const wCols = {Clear:"#10d97e",Clouds:"#8a93aa",Haze:"#f5a623",Drizzle:"#4d9fff",
-                  Rain:"#3b82f6",Fog:"#50596e",Thunderstorm:"#ff4d4d"};
-  new Chart(document.getElementById("c-weather"), {
-    type:"bar",
-    data:{
-      labels: wKeys,
-      datasets:[{
-        data: wVals,
-        backgroundColor: wKeys.map(k => wCols[k]||"#4d9fff"),
-        borderRadius:4, borderWidth:0,
-      }],
-    },
-    options: chartDefaults({
-      scales:{
-        x:{ticks:{color:"#50596e",font:{size:9}},grid:{color:"#1d2535"}},
-        y:{ticks:{color:"#50596e",font:{size:10}},grid:{color:"#1d2535"}},
-      },
-    }),
-  });
+function renderJunctionChart(data) {
+    const ctx = document.getElementById("c-junc")?.getContext("2d");
+    if (!ctx) return;
+    if (charts.junc) charts.junc.destroy();
+    charts.junc = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.values(data.junction_names),
+            datasets: [{
+                data: Object.values(data.junction_avg),
+                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+            }]
+        },
+        options: chartDefaults()
+    });
+}
 
-  // 4) Monthly trend
-  new Chart(document.getElementById("c-monthly"), {
-    type:"line",
-    data:{
-      labels: MONTHS,
-      datasets:[{
-        data: eda.monthly,
-        borderColor:"#4d9fff", fill:true, backgroundColor:"#4d9fff18",
-        tension:.4, pointRadius:3, pointBackgroundColor:"#4d9fff",
-      }],
-    },
-    options: chartDefaults(),
-  });
+function renderFeatureImportance(featImp) {
+    // Create the container dynamically if it's missing
+    const parent = document.getElementById("p-models");
+    let importanceBox = document.getElementById("importance-box");
+    
+    if (!importanceBox) {
+        importanceBox = document.createElement("div");
+        importanceBox.id = "importance-box";
+        importanceBox.className = "pnl";
+        importanceBox.style.marginTop = "20px";
+        importanceBox.innerHTML = `
+            <div class="pnl-hd"><div class="pnl-ttl">Feature Importance (RF)</div><div class="pnl-sub">Top weights assigned by model</div></div>
+            <div class="cw h240"><canvas id="c-importance"></canvas></div>
+        `;
+        parent.appendChild(importanceBox);
+    }
 
-  // 5) Distribution
-  new Chart(document.getElementById("c-dist"), {
-    type:"bar",
-    data:{
-      labels: eda.dist_labels,
-      datasets:[{
-        data: eda.dist_counts,
-        backgroundColor:"#4d9fff55", borderColor:"#4d9fff",
-        borderWidth:1, borderRadius:4,
-      }],
-    },
-    options: chartDefaults({
-      scales:{
-        x:{ticks:{color:"#50596e",font:{size:9},maxRotation:30},grid:{color:"#1d2535"}},
-        y:{ticks:{color:"#50596e",font:{size:10}},grid:{color:"#1d2535"}},
-      },
-    }),
-  });
+    const ctx = document.getElementById("c-importance").getContext("2d");
+    const labels = Object.keys(featImp).slice(0, 7);
+    const values = Object.values(featImp).slice(0, 7);
+
+    if (charts.importance) charts.importance.destroy();
+    charts.importance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels.map(l => l.replace('_', ' ').toUpperCase()),
+            datasets: [{
+                data: values,
+                backgroundColor: 'rgba(139, 92, 246, 0.6)',
+                borderColor: '#8b5cf6',
+                borderWidth: 1
+            }]
+        },
+        options: chartDefaults()
+    });
 }
