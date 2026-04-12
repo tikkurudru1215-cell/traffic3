@@ -1,9 +1,25 @@
 /* ============================================================
-   predictor.js — Full Project Version
-   Integrated: SHAP Explainable AI & Anomaly Detection UI
-   ============================================================ */
+    predictor.js — Full Project Version (Production Ready)
+    Integrated: SHAP Explainable AI & Anomaly Detection UI
+    ============================================================ */
 
 let forecastChart = null; 
+
+// Detect if we are running on Render or Localhost
+const API_BASE_URL = window.location.origin;
+
+/**
+ * Helper: Centralized Fetch wrapper to handle API calls
+ */
+async function apiPost(endpoint, data) {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return await response.json();
+}
 
 /**
  * Main function: Orchestrates the prediction and UI updates
@@ -52,12 +68,13 @@ async function runPrediction() {
         renderForecast(fc.hours, pred.thresholds);
 
         // 6. Reveal panels
-        resPnl.classList.add("on");
+        if (resPnl) resPnl.classList.add("on");
         if (insPnl) insPnl.style.display = "block";
 
     } catch (err) {
         console.error("Inference Error:", err);
-        alert("Connection Lost: Ensure Flask server is running at http://127.0.0.1:5000");
+        // Corrected alert for Production environment
+        alert("Inference Failed: Could not connect to the AI Engine. Please check your network or server status.");
     } finally {
         btn.disabled = false;
         btn.textContent = "PREDICT TRAFFIC VOLUME →";
@@ -73,17 +90,21 @@ function updatePredictorUI(data) {
     const descEl = document.getElementById("res-desc");
     const fillEl = document.getElementById("res-fill");
 
-    volEl.textContent = data.volume;
-    lvlEl.textContent = data.level;
-    lvlEl.style.color = data.color;
+    if (volEl) volEl.textContent = data.volume;
+    if (lvlEl) {
+        lvlEl.textContent = data.level;
+        lvlEl.style.color = data.color;
+    }
     
     // Update progress bar
-    const pct = Math.min(100, (data.volume / 2000) * 100);
-    fillEl.style.width = pct + "%";
-    fillEl.style.background = data.color;
+    if (fillEl) {
+        const pct = Math.min(100, (data.volume / 2000) * 100);
+        fillEl.style.width = pct + "%";
+        fillEl.style.background = data.color;
+    }
 
     // Standard descriptive footer
-    descEl.textContent = `Bhopal ML Logic: Category is ${data.level} based on 6-junction historical quantiles.`;
+    if (descEl) descEl.textContent = `Bhopal ML Logic: Category is ${data.level} based on 6-junction historical quantiles.`;
 }
 
 /**
@@ -119,10 +140,9 @@ function updateInsightsBox(data) {
         }
     }
 
-    // XAI Analysis (Point 2 - The Fix for your error)
+    // XAI Analysis (SHAP Explainability)
     if (insConf) {
         insConf.textContent = "AI Analysis";
-        // Look for the description element specifically
         const confD = document.getElementById("ins-xai-details");
         if (confD) {
             let explanation = "";
@@ -138,12 +158,21 @@ function updateInsightsBox(data) {
  * Renders the 24-Hour Forecast Graph
  */
 function renderForecast(hours, thresholds) {
-    const ctx = document.getElementById("c-forecast")?.getContext("2d");
-    if (!ctx) return;
+    const canvas = document.getElementById("c-forecast");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
 
     const labels = hours.map(h => `${h.hour}:00`);
     const volumes = hours.map(h => h.volume);
-    const colors = hours.map(h => classifyVolume(h.volume, thresholds).color);
+    
+    // Helper to get color if classifyVolume is not defined globally in JS
+    const getBarColor = (vol) => {
+        if (vol > 1000) return "#ff4d4d"; // High
+        if (vol > 500) return "#f5a623";  // Medium
+        return "#10d97e";                 // Low
+    };
+
+    const colors = hours.map(h => h.color || getBarColor(h.volume));
 
     if (forecastChart) forecastChart.destroy();
     
@@ -157,16 +186,22 @@ function renderForecast(hours, thresholds) {
                 borderRadius: 4
             }]
         },
-        options: chartDefaults({
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
             plugins: { 
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: (ctx) => ` ${ctx.raw} veh/hr (${hours[ctx.dataIndex].level})`
+                        label: (ctx) => ` ${ctx.raw} veh/hr`
                     }
                 }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: "rgba(255,255,255,0.1)" } },
+                x: { grid: { display: false } }
             }
-        })
+        }
     });
 }
 
@@ -182,3 +217,6 @@ function initPredictor() {
     if (slHr && lvHr) slHr.oninput = () => { lvHr.textContent = `${slHr.value}:00`; };
     if (slTmp && lvTmp) slTmp.oninput = () => { lvTmp.textContent = `${slTmp.value}°C`; };
 }
+
+// Initialize sliders on load
+window.addEventListener('DOMContentLoaded', initPredictor);
