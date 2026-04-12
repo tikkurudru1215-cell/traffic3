@@ -80,6 +80,11 @@ apiPost("/api/forecast/", payload)
         btn.disabled = false;
         btn.textContent = "PREDICT TRAFFIC VOLUME →";
     }
+    // Inside runPrediction() in predictor.js
+const [pred, fc] = await Promise.all([
+    apiPost("/api/predict/", payload),  // Added / at the end
+    apiPost("/api/forecast/", payload)  // Added / at the end
+]);
 }
 
 /**
