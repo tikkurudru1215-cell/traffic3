@@ -18,7 +18,7 @@ app = Flask(
     template_folder=os.path.join(BASE_DIR, "frontend", "templates"),
     static_folder=os.path.join(BASE_DIR, "frontend", "static"),
 )
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Import core ML logic and junction data from model.py
 try:
@@ -46,7 +46,7 @@ def index():
     return render_template("index.html")
 
 # ── Prediction with SHAP & Anomaly Detection ──────────────
-@app.post("/api/predict")
+@app.post("/api/predict/")
 def predict():
     data = request.get_json()
     pkg = get_model()
@@ -93,7 +93,7 @@ def predict():
     })
 
 # ── 24-Hour Forecast ──────────────────────────────────────
-@app.post("/api/forecast")
+@app.post("/api/forecast/")
 def forecast():
     data = request.get_json()
     pkg = get_model()
