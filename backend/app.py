@@ -5,20 +5,20 @@
 ================================================================
 """
 import os
-import json
-import math
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 
-# 1. Initialize App at Top Level for Gunicorn compatibility
-# We dynamically locate the frontend folders relative to this script
+# This finds the 'traffic3' root folder correctly
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 app = Flask(
     __name__,
+    # Go into frontend/templates for HTML
     template_folder=os.path.join(BASE_DIR, "frontend", "templates"),
-    static_folder=os.path.join(BASE_DIR, "frontend", "static"),
+    # Go into frontend for static files (so /static/... works)
+    static_folder=os.path.join(BASE_DIR, "frontend") 
 )
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+CORS(app)
 
 # Import core ML logic and junction data from model.py
 try:
