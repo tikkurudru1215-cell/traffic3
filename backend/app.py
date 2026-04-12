@@ -7,6 +7,8 @@
 import os, json, math
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
+app = Flask(__name__) # THIS LINE IS MISSING
+CORS(app)
 
 # Import core ML logic and junction data from model.py
 from model import load_model, make_prediction, classify_volume, JUNCTIONS, WEATHER_IMPACT
