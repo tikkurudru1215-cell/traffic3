@@ -54,8 +54,9 @@ async function runPrediction() {
 
         // 2. Fetch Prediction (includes SHAP & Anomaly data) and 24h Trend
         const [pred, fc] = await Promise.all([
-            apiPost("/api/predict", payload),
-            apiPost("/api/forecast", payload)
+            apiPost("/api/predict/", payload)
+
+apiPost("/api/forecast/", payload)
         ]);
 
         // 3. Update Standard Result UI
