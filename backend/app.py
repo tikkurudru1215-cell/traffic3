@@ -11,12 +11,17 @@ from flask_cors import CORS
 # This finds the 'traffic3' root folder correctly
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# In backend/app.py
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 app = Flask(
     __name__,
-    # Go into frontend/templates for HTML
+    # This points to traffic3/frontend/templates
     template_folder=os.path.join(BASE_DIR, "frontend", "templates"),
-    # Go into frontend for static files (so /static/... works)
-    static_folder=os.path.join(BASE_DIR, "frontend") 
+    # This ensures static files are served from traffic3/frontend/static
+    static_folder=os.path.join(BASE_DIR, "frontend", "static"),
+    # This allows you to use /static/ in your HTML
+    static_url_path='/static' 
 )
 CORS(app)
 
