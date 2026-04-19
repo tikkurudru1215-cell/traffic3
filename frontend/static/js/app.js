@@ -3,7 +3,7 @@
    Updated: Added Model Analysis & Data Pipeline Initializers
    ============================================================ */
 
-const API = "http://127.0.0.1:5000"; 
+const API = "https://traffic3-1.onrender.com";
 
 /**
  * Global Configuration for Traffic Levels
