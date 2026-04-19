@@ -10,7 +10,7 @@ import os, sys
 MODEL_PATH = os.path.join("models", "traffic_model.pkl")
 DATA_PATH  = os.path.join("data",   "bhopal_traffic_dataset.csv")
 
-if not os.path.exists(MODEL_PATH) or not os.path.exists(DATA_PATH):
+"""if not os.path.exists(MODEL_PATH) or not os.path.exists(DATA_PATH):
     print("=" * 55)
     print("  First run detected — training model...")
     print("  This takes ~60 seconds. Please wait.")
@@ -19,7 +19,7 @@ if not os.path.exists(MODEL_PATH) or not os.path.exists(DATA_PATH):
     result = subprocess.run([sys.executable, "model.py"], check=True)
     print("=" * 55)
     print("  Model trained successfully!")
-    print("=" * 55)
+    print("=" * 55)"""
 
 # Start Flask app
 from app import create_app
