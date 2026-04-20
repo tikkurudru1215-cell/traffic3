@@ -8,11 +8,9 @@ import os
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 
-# This finds the 'traffic3' root folder correctly
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# In backend/app.py
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__)) # If app.py is in backend/
+# If app.py is in the root, use: BASE_DIR = os.getcwd()
 
 app = Flask(
     __name__,
