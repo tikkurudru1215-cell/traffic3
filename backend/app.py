@@ -9,14 +9,19 @@ from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 
 import os
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 app = Flask(
     __name__,
-    template_folder=os.path.join(BASE_DIR, "frontend", "templates"),
-    static_folder=os.path.join(BASE_DIR, "frontend", "static"),
+    template_folder="../frontend/templates",
+    static_folder="../frontend/static",
     static_url_path='/static'
 )
 CORS(app)
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return app.send_static_file(filename)
 
 # Import core ML logic and junction data from model.py
 # Import core ML logic and junction data from model.py
