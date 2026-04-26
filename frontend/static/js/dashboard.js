@@ -2,6 +2,13 @@
    dashboard.js — Data Fetching & Chart Rendering
    Tabs Handled: Dashboard, Model Analysis, Data Pipeline
    ============================================================ */
+const API_BASE_URL = window.location.origin;
+
+async function apiGet(endpoint) {
+    const res = await fetch(`${API_BASE_URL}${endpoint}`);
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    return await res.json();
+}
 
 let charts = {}; // Store chart instances globally to prevent re-init errors
 
