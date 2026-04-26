@@ -1,13 +1,9 @@
 /* ============================================================
    app.js — Core Logic, Tab Switching, & Shared Helpers
-   Updated: Added Model Analysis & Data Pipeline Initializers
    ============================================================ */
 
 const API = window.location.origin;
 
-/**
- * Global Configuration for Traffic Levels
- */
 const LEVEL_DESC = {
     "LOW":       "Free flowing — no significant delays.",
     "MODERATE":  "Noticeable volume — expect minor slow-downs.",
@@ -17,7 +13,6 @@ const LEVEL_DESC = {
 
 /**
  * Tab Switching Logic
- * Triggers specific function for each page to load data/charts
  */
 function switchTab(id, el) {
     // 1. UI Toggle classes
@@ -36,20 +31,18 @@ function switchTab(id, el) {
         if (typeof initPredictor === "function") initPredictor();
     }
     else if (id === "p-models") {
-        // This fills the empty Model Analysis page you saw
         if (typeof initModelAnalysis === "function") initModelAnalysis();
     } 
     else if (id === "p-data") {
-        // This fills the Data Pipeline charts
         if (typeof initDataTab === "function") initDataTab();
     }
 }
 
 /* ── API Helpers ───────────────────────────────────────────── */
 async function apiFetch(path, opts = {}) {
-V    const res = await fetch(window.location.origin + path), {
+    const res = await fetch(window.location.origin + path, {
         headers: { "Content-Type": "application/json" },
-        ...opts,
+        ...opts
     });
     if (!res.ok) throw new Error(`API ${path} → ${res.status}`);
     return res.json();
@@ -106,6 +99,9 @@ window.addEventListener("DOMContentLoaded", () => {
     setInterval(updateClock, 1000);
     updateClock();
 
-    // 3. Default to Dashboard on load
-    initDashboard();
+    // 3. Default to Dashboard on load - only trigger if current page is Dashboard
+    const activeTab = document.querySelector(".tab.on");
+    if (activeTab && activeTab.getAttribute("onclick").includes("p-dash")) {
+        initDashboard();
+    }
 });
