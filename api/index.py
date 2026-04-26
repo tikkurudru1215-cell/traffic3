@@ -1,4 +1,4 @@
 from backend.app import app
 
-# Vercel expects this
-handler = app
+# This is required for Vercel to pick up the Flask/FastAPI instance
+app = app
