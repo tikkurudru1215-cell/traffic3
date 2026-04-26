@@ -131,9 +131,37 @@ def eda():
 
         df = pd.read_csv(CSV_PATH)
 
-        print("COLUMNS:", df.columns.tolist())  # DEBUG
+        # Clean columns
+        df.columns = df.columns.str.strip().str.lower()
 
-        return jsonify({"status": "EDA working"})
+        # Hourly patterns
+        hourly_weekday = df[df["day_of_week"] < 5].groupby("hour")["traffic_volume"].mean().fillna(0).tolist()
+        hourly_weekend = df[df["day_of_week"] >= 5].groupby("hour")["traffic_volume"].mean().fillna(0).tolist()
+
+        # Junction avg
+        junction_avg = df.groupby("junction_id")["traffic_volume"].mean().to_dict()
+
+        # Distribution
+        bins = [0, 400, 900, 2000]
+        labels = ["Low", "Medium", "High"]
+        df["category"] = pd.cut(df["traffic_volume"], bins=bins, labels=labels)
+        dist_counts = df["category"].value_counts().reindex(labels, fill_value=0).tolist()
+
+        return jsonify({
+            "hourly_weekday": hourly_weekday,
+            "hourly_weekend": hourly_weekend,
+            "junction_names": {
+                "J01_DBMall": "DB Mall",
+                "J02_MPNagar": "MP Nagar",
+                "J03_NewMarket": "New Market",
+                "J04_Karond": "Karond",
+                "J05_Ayodhya": "Ayodhya",
+                "J06_Bairagarh": "Bairagarh"
+            },
+            "junction_avg": junction_avg,
+            "dist_labels": labels,
+            "dist_counts": dist_counts
+        })
 
     except Exception as e:
         return jsonify({"error": str(e)})
