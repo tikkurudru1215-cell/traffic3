@@ -4,6 +4,10 @@
   Features: SHAP Explainable AI & Anomaly Detection Integration
 ================================================================
 """
+import sys
+
+
+sys.path.append(os.path.dirname(__file__))
 import os
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
