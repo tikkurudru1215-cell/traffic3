@@ -1,32 +1,32 @@
 /* ============================================================
-   dashboard.js — Data Fetching & Chart Rendering
-   Tabs Handled: Dashboard, Model Analysis, Data Pipeline
+    dashboard.js — Data Fetching & Chart Rendering
+    Note: Depends on 'API' and 'chartDefaults' defined in app.js
    ============================================================ */
-const API_BASE_URL = window.location.origin;
 
-async function apiGet(endpoint) {
-    const res = await fetch(`${API_BASE_URL}${endpoint}`);
-    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-    return await res.json();
-}
-
-let charts = {}; // Store chart instances globally to prevent re-init errors
+// Variable to store chart instances globally to prevent "Canvas in use" errors
+let charts = {}; 
 
 /**
  * Main initializer for the Dashboard Tab
  */
 async function initDashboard() {
     try {
+        // Uses the 'API' constant defined in app.js
         const [eda, metrics] = await Promise.all([
             apiGet("/api/eda"),
             apiGet("/api/metrics")
         ]);
 
-        // 1. Update Metric Cards at the top
-        document.querySelector("#mc-rf .mc-val").textContent = metrics.rf.r2.toFixed(4);
-        document.querySelector("#mc-lr .mc-val").textContent = metrics.lr.r2.toFixed(4);
-        document.querySelector("#mc-imp .mc-val").textContent = metrics.improvement + "x";
-        document.querySelector("#mc-dataset .mc-val").textContent = "105,120";
+        // 1. Update Metric Cards with null checks to prevent script crashes
+        const rfVal = document.querySelector("#mc-rf .mc-val");
+        const lrVal = document.querySelector("#mc-lr .mc-val");
+        const impVal = document.querySelector("#mc-imp .mc-val");
+        const dsVal = document.querySelector("#mc-dataset .mc-val");
+
+        if (rfVal) rfVal.textContent = metrics.rf.r2.toFixed(4);
+        if (lrVal) lrVal.textContent = metrics.lr.r2.toFixed(4);
+        if (impVal) impVal.textContent = metrics.improvement + "x";
+        if (dsVal) dsVal.textContent = "105,120"; // Static count from dataset
 
         // 2. Render Dashboard Charts
         renderHourlyChart(eda);
@@ -59,11 +59,12 @@ async function initModelAnalysis() {
                         borderRadius: 6
                     }]
                 },
+                // Calls the helper function from app.js
                 options: chartDefaults({ indexAxis: 'y' })
             });
         }
 
-        // 2. Feature Importance Chart (Dynamic)
+        // 2. Feature Importance Chart
         renderFeatureImportance(data.feat_imp);
 
     } catch (err) {
@@ -135,8 +136,9 @@ function renderJunctionChart(data) {
 }
 
 function renderFeatureImportance(featImp) {
-    // Create the container dynamically if it's missing
     const parent = document.getElementById("p-models");
+    if (!parent) return;
+
     let importanceBox = document.getElementById("importance-box");
     
     if (!importanceBox) {
@@ -145,13 +147,19 @@ function renderFeatureImportance(featImp) {
         importanceBox.className = "pnl";
         importanceBox.style.marginTop = "20px";
         importanceBox.innerHTML = `
-            <div class="pnl-hd"><div class="pnl-ttl">Feature Importance (RF)</div><div class="pnl-sub">Top weights assigned by model</div></div>
+            <div class="pnl-hd">
+                <div class="pnl-ttl">Feature Importance (RF)</div>
+                <div class="pnl-sub">Top weights assigned by model</div>
+            </div>
             <div class="cw h240"><canvas id="c-importance"></canvas></div>
         `;
         parent.appendChild(importanceBox);
     }
 
-    const ctx = document.getElementById("c-importance").getContext("2d");
+    const canvas = document.getElementById("c-importance");
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext("2d");
     const labels = Object.keys(featImp).slice(0, 7);
     const values = Object.values(featImp).slice(0, 7);
 
@@ -170,6 +178,3 @@ function renderFeatureImportance(featImp) {
         options: chartDefaults()
     });
 }
-window.addEventListener("DOMContentLoaded", () => {
-    initDashboard();
-});
