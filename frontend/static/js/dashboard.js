@@ -170,3 +170,6 @@ function renderFeatureImportance(featImp) {
         options: chartDefaults()
     });
 }
+window.addEventListener("DOMContentLoaded", () => {
+    initDashboard();
+});
