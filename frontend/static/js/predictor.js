@@ -1,25 +1,10 @@
 /* ============================================================
     predictor.js — Full Project Version (Production Ready)
     Integrated: SHAP Explainable AI & Anomaly Detection UI
-    ============================================================ */
+   ============================================================ */
 
-let forecastChart = null; 
-
-// Detect if we are running on Render or Localhost
-const API_BASE_URL = window.location.origin;
-
-/**
- * Helper: Centralized Fetch wrapper to handle API calls
- */
-async function apiPost(endpoint, data) {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-    });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    return await response.json();
-}
+// Use the global 'charts' object from app.js to prevent "already in use" errors
+// Removed local API_BASE_URL to fix "Already Declared" error
 
 /**
  * Main function: Orchestrates the prediction and UI updates
@@ -34,6 +19,7 @@ async function runPrediction() {
     const elDay = document.getElementById("sel-day");
     const elJunc = document.getElementById("sel-junc");
     const elWthr = document.getElementById("sel-wthr");
+    const elTmp = document.getElementById("sl-tmp");
 
     if (!elHr || !elDay || !elJunc) {
         console.error("Critical UI elements missing. Check index.html IDs.");
@@ -43,9 +29,11 @@ async function runPrediction() {
     const payload = {
         hour: parseInt(elHr.value),
         day_of_week: parseInt(elDay.value),
-        month: 3, // Defaulting to March
+        temperature_c: elTmp ? parseInt(elTmp.value) : 28,
+        month: new Date().getMonth() + 1,
         weather: elWthr ? elWthr.value : "Clear",
-        junction_id: elJunc.value
+        junction_id: elJunc.value,
+        is_holiday: 0
     };
 
     try {
@@ -53,11 +41,11 @@ async function runPrediction() {
         btn.textContent = "RUNNING AI INFERENCE...";
 
         // 2. Fetch Prediction (includes SHAP & Anomaly data) and 24h Trend
-        // CORRECTED CODE:
-const [pred, fc] = await Promise.all([
-    apiPost("/api/predict/", payload),
-    apiPost("/api/forecast/", payload)
-]);
+        // Using apiPost from app.js with corrected trailing slashes
+        const [pred, fc] = await Promise.all([
+            apiPost("/api/predict/", payload),
+            apiPost("/api/forecast/", payload)
+        ]);
 
         // 3. Update Standard Result UI
         updatePredictorUI(pred);
@@ -69,22 +57,16 @@ const [pred, fc] = await Promise.all([
         renderForecast(fc.hours, pred.thresholds);
 
         // 6. Reveal panels
-        if (resPnl) resPnl.classList.add("on");
+        if (resPnl) resPnl.style.display = "block";
         if (insPnl) insPnl.style.display = "block";
 
     } catch (err) {
         console.error("Inference Error:", err);
-        // Corrected alert for Production environment
-        alert("Inference Failed: Could not connect to the AI Engine. Please check your network or server status.");
+        alert("Inference Failed: Could not connect to the AI Engine. Please check server status.");
     } finally {
         btn.disabled = false;
         btn.textContent = "PREDICT TRAFFIC VOLUME →";
     }
-    // Inside runPrediction() in predictor.js
-const [pred, fc] = await Promise.all([
-    apiPost("/api/predict/", payload),  // Added / at the end
-    apiPost("/api/forecast/", payload)  // Added / at the end
-]);
 }
 
 /**
@@ -102,19 +84,17 @@ function updatePredictorUI(data) {
         lvlEl.style.color = data.color;
     }
     
-    // Update progress bar
     if (fillEl) {
         const pct = Math.min(100, (data.volume / 2000) * 100);
         fillEl.style.width = pct + "%";
         fillEl.style.background = data.color;
     }
 
-    // Standard descriptive footer
-    if (descEl) descEl.textContent = `Bhopal ML Logic: Category is ${data.level} based on 6-junction historical quantiles.`;
+    if (descEl) descEl.textContent = `Bhopal ML Logic: Category is ${data.level} based on historical data.`;
 }
 
 /**
- * NEW: Populates the Insights Box with SHAP (Explainability) and Anomaly data
+ * Populates the Insights Box with SHAP (Explainability) and Anomaly data
  */
 function updateInsightsBox(data) {
     const insRaw  = document.getElementById("ins-raw");
@@ -126,17 +106,15 @@ function updateInsightsBox(data) {
 
     if (insRaw) insRaw.textContent = data.volume;
 
-    // Weather Analysis
     if (insWthr) {
         insWthr.textContent = data.inputs.weather;
         insWthr.style.color = ["Rain", "Fog", "Thunderstorm"].includes(data.inputs.weather) ? "#ff4d4d" : "#10d97e";
     }
     if (insWthrD) insWthrD.textContent = data.volume > 800 ? "High resistance" : "Clear flow";
 
-    // Anomaly Detection UI
     if (insEvt) {
         if (data.is_anomaly) {
-            insEvt.textContent = "ANOMALY";
+            insEvt.textContent = "⚠️ ANOMALY";
             insEvt.style.color = "#ff4d4d";
             if (insEvtD) insEvtD.textContent = "Unusual traffic spike!";
         } else {
@@ -146,11 +124,10 @@ function updateInsightsBox(data) {
         }
     }
 
-    // XAI Analysis (SHAP Explainability)
     if (insConf) {
         insConf.textContent = "AI Analysis";
         const confD = document.getElementById("ins-xai-details");
-        if (confD) {
+        if (confD && data.contributions) {
             let explanation = "";
             for (let [key, val] of Object.entries(data.contributions)) {
                 explanation += `${key.split(' ')[0]}: ${val > 0 ? '+' : ''}${val} | `;
@@ -163,51 +140,24 @@ function updateInsightsBox(data) {
 /**
  * Renders the 24-Hour Forecast Graph
  */
-function renderForecast(hours, thresholds) {
+function renderForecast(hours) {
     const canvas = document.getElementById("c-forecast");
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
 
-    const labels = hours.map(h => `${h.hour}:00`);
-    const volumes = hours.map(h => h.volume);
+    if (charts.forecast) charts.forecast.destroy();
     
-    // Helper to get color if classifyVolume is not defined globally in JS
-    const getBarColor = (vol) => {
-        if (vol > 1000) return "#ff4d4d"; // High
-        if (vol > 500) return "#f5a623";  // Medium
-        return "#10d97e";                 // Low
-    };
-
-    const colors = hours.map(h => h.color || getBarColor(h.volume));
-
-    if (forecastChart) forecastChart.destroy();
-    
-    forecastChart = new Chart(ctx, {
+    charts.forecast = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels,
+            labels: hours.map(h => `${h.hour}:00`),
             datasets: [{
-                data: volumes,
-                backgroundColor: colors,
+                data: hours.map(h => h.volume),
+                backgroundColor: hours.map(h => h.color),
                 borderRadius: 4
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { 
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: (ctx) => ` ${ctx.raw} veh/hr`
-                    }
-                }
-            },
-            scales: {
-                y: { beginAtZero: true, grid: { color: "rgba(255,255,255,0.1)" } },
-                x: { grid: { display: false } }
-            }
-        }
+        options: chartDefaults() // Uses shared function from app.js
     });
 }
 
@@ -223,6 +173,3 @@ function initPredictor() {
     if (slHr && lvHr) slHr.oninput = () => { lvHr.textContent = `${slHr.value}:00`; };
     if (slTmp && lvTmp) slTmp.oninput = () => { lvTmp.textContent = `${slTmp.value}°C`; };
 }
-
-// Initialize sliders on load
-window.addEventListener('DOMContentLoaded', initPredictor);
