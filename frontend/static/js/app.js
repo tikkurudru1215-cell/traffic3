@@ -3,7 +3,7 @@
    Updated: Added Model Analysis & Data Pipeline Initializers
    ============================================================ */
 
-const API = "https://traffic3-1.onrender.com";
+const API = window.location.origin;
 
 /**
  * Global Configuration for Traffic Levels
@@ -47,7 +47,7 @@ function switchTab(id, el) {
 
 /* ── API Helpers ───────────────────────────────────────────── */
 async function apiFetch(path, opts = {}) {
-    const res = await fetch(API + path, {
+V    const res = await fetch(window.location.origin + path), {
         headers: { "Content-Type": "application/json" },
         ...opts,
     });
