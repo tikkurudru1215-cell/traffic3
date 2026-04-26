@@ -120,49 +120,23 @@ def metrics():
         "thresholds": pkg.get("thresholds"),
         "improvement": round(pkg["metrics"]["lr"]["mae"] / pkg["metrics"]["rf"]["mae"], 1)
     })
- @app.get("/api/eda")
+@app.get("/api/eda")
 def eda():
     import pandas as pd
-    
+    import os
+
     try:
-        df = pd.read_csv("data/bhopal_traffic_dataset.csv")
-    except:
-        return jsonify({"error": "Dataset not found"}), 500
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        CSV_PATH = os.path.join(BASE_DIR, "data", "bhopal_traffic_dataset.csv")
 
-    # Basic cleaning
-    df.columns = [c.lower() for c in df.columns]
+        df = pd.read_csv(CSV_PATH)
 
-    # ── Hourly Patterns ──
-    hourly_weekday = df[df["day_of_week"] < 5].groupby("hour")["traffic_volume"].mean().tolist()
-    hourly_weekend = df[df["day_of_week"] >= 5].groupby("hour")["traffic_volume"].mean().tolist()
+        print("COLUMNS:", df.columns.tolist())  # DEBUG
 
-    # ── Junction Load ──
-    junction_avg = df.groupby("junction_id")["traffic_volume"].mean().to_dict()
+        return jsonify({"status": "EDA working"})
 
-    junction_names = {
-        "J01_DBMall": "DB Mall",
-        "J02_MPNagar": "MP Nagar",
-        "J03_NewMarket": "New Market",
-        "J04_Karond": "Karond",
-        "J05_Ayodhya": "Ayodhya",
-        "J06_Bairagarh": "Bairagarh"
-    }
-
-    # ── Distribution ──
-    bins = [0, 400, 900, 2000]
-    labels = ["Low", "Medium", "High"]
-    df["category"] = pd.cut(df["traffic_volume"], bins=bins, labels=labels)
-
-    dist_counts = df["category"].value_counts().reindex(labels, fill_value=0).tolist()
-
-    return jsonify({
-        "hourly_weekday": hourly_weekday,
-        "hourly_weekend": hourly_weekend,
-        "junction_names": junction_names,
-        "junction_avg": junction_avg,
-        "dist_labels": labels,
-        "dist_counts": dist_counts
-    }) 
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 @app.get("/api/status")
 def status():
