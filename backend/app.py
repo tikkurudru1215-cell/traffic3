@@ -120,6 +120,49 @@ def metrics():
         "thresholds": pkg.get("thresholds"),
         "improvement": round(pkg["metrics"]["lr"]["mae"] / pkg["metrics"]["rf"]["mae"], 1)
     })
+ @app.get("/api/eda")
+def eda():
+    import pandas as pd
+    
+    try:
+        df = pd.read_csv("data/bhopal_traffic_dataset.csv")
+    except:
+        return jsonify({"error": "Dataset not found"}), 500
+
+    # Basic cleaning
+    df.columns = [c.lower() for c in df.columns]
+
+    # ── Hourly Patterns ──
+    hourly_weekday = df[df["day_of_week"] < 5].groupby("hour")["traffic_volume"].mean().tolist()
+    hourly_weekend = df[df["day_of_week"] >= 5].groupby("hour")["traffic_volume"].mean().tolist()
+
+    # ── Junction Load ──
+    junction_avg = df.groupby("junction_id")["traffic_volume"].mean().to_dict()
+
+    junction_names = {
+        "J01_DBMall": "DB Mall",
+        "J02_MPNagar": "MP Nagar",
+        "J03_NewMarket": "New Market",
+        "J04_Karond": "Karond",
+        "J05_Ayodhya": "Ayodhya",
+        "J06_Bairagarh": "Bairagarh"
+    }
+
+    # ── Distribution ──
+    bins = [0, 400, 900, 2000]
+    labels = ["Low", "Medium", "High"]
+    df["category"] = pd.cut(df["traffic_volume"], bins=bins, labels=labels)
+
+    dist_counts = df["category"].value_counts().reindex(labels, fill_value=0).tolist()
+
+    return jsonify({
+        "hourly_weekday": hourly_weekday,
+        "hourly_weekend": hourly_weekend,
+        "junction_names": junction_names,
+        "junction_avg": junction_avg,
+        "dist_labels": labels,
+        "dist_counts": dist_counts
+    }) 
 
 @app.get("/api/status")
 def status():
