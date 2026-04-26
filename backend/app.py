@@ -25,7 +25,7 @@ def serve_static(filename):
 
 # Import core ML logic and junction data from model.py
 # Import core ML logic and junction data from model.py
-from backend.model import load_model, make_prediction, classify_volume, JUNCTIONS, WEATHER_IMPACT
+from model import load_model, make_prediction, classify_volume, JUNCTIONS, WEATHER_IMPACT
 
 # ── Global Model Cache ───────────────────────────────────────
 _MODEL_PKG = None
