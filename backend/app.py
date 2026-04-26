@@ -4,16 +4,15 @@
   Features: SHAP Explainable AI & Anomaly Detection Integration
 ================================================================
 """
-import sys
-
-
-sys.path.append(os.path.dirname(__file__))
 import os
+import sys
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 
-import os
+# Correctly set the base directory and add to sys.path before imports
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.append(BASE_DIR)
 
 app = Flask(
     __name__,
@@ -23,13 +22,12 @@ app = Flask(
 )
 CORS(app)
 
+# Import core ML logic after path is set
+from model import load_model, make_prediction, classify_volume
+
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     return app.send_static_file(filename)
-
-# Import core ML logic and junction data from model.py
-# Import core ML logic and junction data from model.py
-from model import load_model, make_prediction, classify_volume, JUNCTIONS, WEATHER_IMPACT
 
 # ── Global Model Cache ───────────────────────────────────────
 _MODEL_PKG = None
@@ -57,7 +55,6 @@ def predict():
     if not pkg: 
         return jsonify({"error": "Model not found"}), 500
 
-    # 1. Extract Inputs
     hour       = int(data.get("hour", 8))
     dow        = int(data.get("day_of_week", 0))
     month      = int(data.get("month", 3))
@@ -65,23 +62,18 @@ def predict():
     junction   = data.get("junction_id", "J01_DBMall")
     is_holiday = int(data.get("is_holiday", 0))
 
-    # 2. Run Random Forest Prediction
     vol = make_prediction(pkg, hour, dow, month, weather, junction, is_holiday)
     
-    # 3. ANOMALY DETECTION (Isolation Forest)
-    # 1 = Normal, -1 = Anomaly
     is_anomaly_val = pkg['iso_forest'].predict([[vol]])[0]
     is_anomaly = bool(is_anomaly_val == -1)
     anomaly_text = "⚠️ Statistical Anomaly" if is_anomaly else "Normal Pattern"
 
-    # 4. EXPLAINABLE AI - SHAP (Simulated for real-time performance)
     contributions = {
         "Hour Impact": 145 if hour in [8, 9, 18, 19] else -30,
         "Weather Factor": -110 if weather in ["Rain", "Fog", "Thunderstorm"] else 20,
         "Junction Load": 55 if "DBMall" in junction or "MPNagar" in junction else 15
     }
 
-    # 5. Classification
     lvl, color = classify_volume(vol, pkg.get("thresholds"))
 
     return jsonify({
@@ -124,28 +116,21 @@ def metrics():
         "thresholds": pkg.get("thresholds"),
         "improvement": round(pkg["metrics"]["lr"]["mae"] / pkg["metrics"]["rf"]["mae"], 1)
     })
+
 @app.get("/api/eda")
 def eda():
     import pandas as pd
-    import os
-
     try:
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        CSV_PATH = os.path.join(BASE_DIR, "data", "bhopal_traffic_dataset.csv")
+        # Use relative path from this file's location to find data folder
+        CSV_PATH = os.path.join(os.path.dirname(BASE_DIR), "data", "bhopal_traffic_dataset.csv")
 
         df = pd.read_csv(CSV_PATH)
-
-        # Clean columns
         df.columns = df.columns.str.strip().str.lower()
 
-        # Hourly patterns
         hourly_weekday = df[df["day_of_week"] < 5].groupby("hour")["traffic_volume"].mean().fillna(0).tolist()
         hourly_weekend = df[df["day_of_week"] >= 5].groupby("hour")["traffic_volume"].mean().fillna(0).tolist()
-
-        # Junction avg
         junction_avg = df.groupby("junction_id")["traffic_volume"].mean().to_dict()
 
-        # Distribution
         bins = [0, 400, 900, 2000]
         labels = ["Low", "Medium", "High"]
         df["category"] = pd.cut(df["traffic_volume"], bins=bins, labels=labels)
@@ -166,7 +151,6 @@ def eda():
             "dist_labels": labels,
             "dist_counts": dist_counts
         })
-
     except Exception as e:
         return jsonify({"error": str(e)})
 
@@ -179,6 +163,5 @@ def status():
 
 # ── Production Entry Point ────────────────────────────────
 if __name__ == "__main__":
-    # This block is used for local development
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
