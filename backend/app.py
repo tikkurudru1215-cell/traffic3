@@ -9,26 +9,18 @@ from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 
 import os
-BASE_DIR = os.path.dirname(os.path.abspath(__file__)) # If app.py is in backend/
-# If app.py is in the root, use: BASE_DIR = os.getcwd()
-
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 app = Flask(
     __name__,
-    # This points to traffic3/frontend/templates
     template_folder=os.path.join(BASE_DIR, "frontend", "templates"),
-    # This ensures static files are served from traffic3/frontend/static
     static_folder=os.path.join(BASE_DIR, "frontend", "static"),
-    # This allows you to use /static/ in your HTML
-    static_url_path='/static' 
+    static_url_path='/static'
 )
 CORS(app)
 
 # Import core ML logic and junction data from model.py
-try:
-    from model import load_model, make_prediction, classify_volume, JUNCTIONS, WEATHER_IMPACT
-except ImportError:
-    # Fallback for different directory structures during testing
-    from backend.model import load_model, make_prediction, classify_volume, JUNCTIONS, WEATHER_IMPACT
+# Import core ML logic and junction data from model.py
+from backend.model import load_model, make_prediction, classify_volume, JUNCTIONS, WEATHER_IMPACT
 
 # ── Global Model Cache ───────────────────────────────────────
 _MODEL_PKG = None
