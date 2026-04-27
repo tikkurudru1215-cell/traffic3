@@ -35,7 +35,7 @@
 html, body { height: 100%; background: var(--bg); color: var(--t1); font-family: var(--font); overflow: hidden; }
 
 /* ── Shell ────────────────────────────────────────────────── */
-.shell { display: grid; grid-template-rows: 56px 44px 1fr; height: 100vh; }
+.shell { display: grid; grid-template-rows: 56px 44px 1fr; height: 100vh; height: 100dvh; }
 
 /* ── Header ───────────────────────────────────────────────── */
 .hdr {
@@ -352,8 +352,53 @@ input[type=range] { padding: 5px 0; accent-color: var(--acc); cursor: pointer; }
 @keyframes spin { to { transform:rotate(360deg); } }
 
 /* ── Responsive ───────────────────────────────────────────── */
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
   .metrics { grid-template-columns: repeat(2,1fr); }
   .row2, .row3, .row-h { grid-template-columns: 1fr; }
   .insight-grid { grid-template-columns: 1fr; }
+  .map-side { width: 310px; }
+}
+
+@media (max-width: 900px) {
+  html, body { overflow: auto; }
+  .shell { grid-template-rows: auto 44px 1fr; min-height: 100vh; min-height: 100dvh; height: auto; }
+  .hdr { padding: 10px 14px; flex-wrap: wrap; gap: 10px; }
+  .hdr-left, .hdr-mid, .hdr-right { width: 100%; }
+  .hdr-mid { flex-wrap: wrap; }
+  .hdr-right { justify-content: space-between; }
+  .nav { padding: 0 10px; }
+  .tab { padding: 0 12px; font-size: 11px; }
+  .content { overflow-y: auto; }
+  .page { padding: 14px 12px; }
+  .fg2 { grid-template-columns: 1fr; }
+  .res-vol { font-size: 36px; }
+  .stat-grid { grid-template-columns: 1fr; }
+  .map-shell { flex-direction: column; height: auto; min-height: calc(100vh - 130px); min-height: calc(100dvh - 130px); }
+  .map-side { width: 100%; border-right: none; border-bottom: 1px solid var(--b1); max-height: 58dvh; }
+  #leaflet-map { min-height: 48dvh; }
+  .map-overlays { right: 10px; top: 10px; }
+}
+
+@media (max-width: 600px) {
+  .hdr-title { font-size: 14px; }
+  .hdr-sub { font-size: 10px; }
+  .chip { font-size: 10px; padding: 3px 8px; }
+  .clk { font-size: 11px; }
+  .metrics { grid-template-columns: 1fr; }
+  .mc { padding: 14px; }
+  .mc-val { font-size: 22px; }
+  .pnl { padding: 14px; border-radius: 12px; }
+  .pnl-ttl { font-size: 10px; }
+  .pred-btn { font-size: 13px; padding: 11px; }
+  .res-vol { font-size: 30px; }
+  .ms-ctrl { flex-direction: column; }
+  .gps-btn-wrap { padding: 10px; }
+  .gps-btn { padding: 9px; }
+  .alert-bar { margin: 0 10px 10px; padding: 9px 10px; font-size: 11px; }
+  .ms-scroll { padding: 10px; }
+  .ms-foot { padding: 8px 10px; }
+  #leaflet-map { min-height: 44dvh; }
+  .map-overlays { left: 10px; right: 10px; top: auto; bottom: 10px; gap: 6px; }
+  .ov-card { padding: 8px 10px; }
+  .ov-val { font-size: 13px; }
 }
