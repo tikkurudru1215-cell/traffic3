@@ -7,3 +7,4 @@ models/traffic_model.pkl
 
 # Ignore Python cache
 **/__pycache__/
+.vercel
