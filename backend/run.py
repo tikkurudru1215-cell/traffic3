@@ -22,9 +22,7 @@ DATA_PATH  = os.path.join("data",   "bhopal_traffic_dataset.csv")
     print("=" * 55)"""
 
 # Start Flask app
-from app import create_app
-
-app = create_app()
+from app import app
 
 if __name__ == "__main__":
     print("\n" + "=" * 55)

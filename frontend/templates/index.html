@@ -6,12 +6,25 @@
     <title>TrafficAI — Bhopal | JUET Guna Project</title>
     
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js" crossorigin="anonymous"></script>
     
     <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/predictor.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/map.js') }}" defer></script>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+      defer
+    ></script>
 </head>
 <body>
 <div class="shell">
@@ -53,6 +66,10 @@
         <div class="tab" onclick="switchTab('p-data',this)">
             <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4.03 3-9 3S3 13.66 3 12M21 19c0 1.66-4.03 3-9 3S3 20.66 3 19V5"/></svg>
             Data Pipeline
+        </div>
+        <div class="tab" onclick="switchTab('p-map',this)">
+            <svg viewBox="0 0 24 24"><path d="M9 20l-5-2V4l5 2 6-2 5 2v14l-5-2z"/><path d="M9 6v14M15 4v14"/></svg>
+            Live Map
         </div>
     </div>
 
@@ -146,7 +163,7 @@
 
                     <div class="pnl" id="insights-pnl" style="display:none; margin-top:20px; border-top: 2px solid var(--blu); background: rgba(30,41,59,0.4);">
                         <div class="pnl-hd"><div class="pnl-ttl">AI Insights & Explainability</div></div>
-                        <div class="stat-grid" style="grid-template-columns: 1fr 1fr; gap:12px; margin-top:10px;">
+                        <div class="stat-grid insight-grid" style="margin-top:10px;">
                             <div class="stat-box">
                                 <div class="stat-lbl">Exact Number</div>
                                 <div class="stat-v" id="ins-raw" style="color:var(--blu)">—</div>
@@ -166,6 +183,40 @@
                                 <div class="stat-v" id="ins-conf" style="color:var(--grn)">High</div>
                                 <small class="stat-d" id="ins-xai-details">Calculating XAI Drivers...</small>
                             </div>
+                            <div class="stat-box">
+                                <div class="stat-lbl">Accident Risk Score</div>
+                                <div class="stat-v" id="ins-risk" style="color:var(--ylw)">—</div>
+                                <small class="stat-d" id="ins-risk-desc">Risk engine not evaluated</small>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-lbl">Hotspot Severity</div>
+                                <div class="stat-v" id="ins-hotspot" style="color:var(--red)">—</div>
+                                <small class="stat-d" id="ins-hotspot-desc">No hotspot analytics yet</small>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-lbl">Avg Delay (Next 3h)</div>
+                                <div class="stat-v" id="ins-delay" style="color:var(--pur)">—</div>
+                                <small class="stat-d" id="ins-delay-desc">Forecast delay pending</small>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-lbl">Emission Load Index</div>
+                                <div class="stat-v" id="ins-emission" style="color:var(--blu)">—</div>
+                                <small class="stat-d" id="ins-emission-desc">CO2 proxy not available</small>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-lbl">Signal Optimization</div>
+                                <div class="stat-v" id="ins-signal" style="color:var(--grn)">—</div>
+                                <small class="stat-d" id="ins-signal-desc">Cycle recommendation pending</small>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-lbl">Incident Readiness</div>
+                                <div class="stat-v" id="ins-incident" style="color:var(--ylw)">—</div>
+                                <small class="stat-d" id="ins-incident-desc">No emergency advisory yet</small>
+                            </div>
+                        </div>
+                        <div class="ins-reco-wrap">
+                            <div class="stat-lbl">AI Action Recommendations (Smart City Ops)</div>
+                            <div id="ins-reco-list" class="ins-reco-list">Run prediction to generate city actions.</div>
                         </div>
                     </div>
                 </div>
@@ -197,7 +248,54 @@
             </div>
         </div>
 
+        <div class="page" id="p-map">
+            <div class="map-shell">
+                <div class="map-side">
+                    <div class="ms-sect">
+                        <div class="ms-label">Route Context</div>
+                        <div class="srow"><span class="sdot sdot-g"></span><input class="sinp" value="DB Mall Chowk" readonly></div>
+                        <div class="srow"><span class="sdot sdot-r"></span><input class="sinp" value="MP Nagar Square" readonly></div>
+                    </div>
+                    <div class="ms-ctrl">
+                        <div class="cg"><div class="cg-l">Hour</div><select class="cs" id="map-h"><option>8</option><option>9</option><option>10</option><option>17</option><option>18</option></select></div>
+                        <div class="cg"><div class="cg-l">Day</div><select class="cs" id="map-d"><option value="0">Mon</option><option value="1">Tue</option><option value="2">Wed</option><option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option></select></div>
+                        <div class="cg"><div class="cg-l">Weather</div><select class="cs" id="map-w"><option>Clear</option><option>Clouds</option><option>Rain</option><option>Fog</option><option>Thunderstorm</option></select></div>
+                    </div>
+                    <div class="ms-ctrl">
+                        <div class="cg">
+                            <div class="cg-l">Incident Level</div>
+                            <select class="cs" id="inc-severity">
+                                <option value="LOW">Low</option>
+                                <option value="MEDIUM">Medium</option>
+                                <option value="HIGH">High</option>
+                            </select>
+                        </div>
+                        <div class="cg">
+                            <div class="cg-l">Action</div>
+                            <button class="gps-btn" id="inc-btn" onclick="reportIncident()">Report Accident</button>
+                        </div>
+                    </div>
+                    <div class="gps-btn-wrap"><button class="gps-btn" id="gps-btn" onclick="toggleGPS()">Start GPS Navigation</button></div>
+                    <div class="alert-bar ok" id="alert-bar"><span id="alert-txt">Waiting for GPS…</span><span class="alert-dist" id="alert-dist"></span></div>
+                    <div class="ms-scroll">
+                        <div class="ms-ttl"><span>Route Recommendations</span><span id="map-meta">Mon 8:00 · Clear</span></div>
+                        <div id="map-route-cards"></div>
+                        <div class="ms-ttl"><span>Control Room Log</span></div>
+                        <div class="gps-log-scroll" id="gps-log-scroll"></div>
+                    </div>
+                    <div class="ms-foot"><span>Deviation threshold</span><span>300m</span></div>
+                </div>
+                <div id="leaflet-map"></div>
+                <div class="map-overlays">
+                    <div class="ov-card"><div class="ov-lbl">Recommended</div><div class="ov-val" id="ov-route">Route A</div></div>
+                    <div class="ov-card"><div class="ov-lbl">Predicted Volume</div><div class="ov-val" id="ov-vol">—</div></div>
+                    <div class="ov-card"><div class="ov-lbl">Estimated Time</div><div class="ov-val" id="ov-time">—</div></div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 </body>
 </html>
+

@@ -62,14 +62,24 @@ def load_model():
     df["dow_sin"] = np.sin(2*np.pi*df["day_of_week"]/7)
     df["dow_cos"] = np.cos(2*np.pi*df["day_of_week"]/7)
     df["peak_weekday"] = df["is_peak_hour"] * (1-df["is_weekend"])
+    df["holiday_weekend"] = ((df["is_holiday"] == 1) | (df["is_weekend"] == 1)).astype(int)
     df["rain_peak"] = (df["weather"] == "Rain").astype(int) * df["is_peak_hour"]
 
     for col in ["lag_1h","lag_24h","lag_168h","rolling_3h","rolling_6h"]:
         df[col] = df[TARGET].shift(1).fillna(df[TARGET].mean())
 
     # 5. Model Training
-    rf = RandomForestRegressor(n_estimators=25, max_depth=10, n_jobs=-1).fit(df[FEATURES], df[TARGET])
-    iso = IsolationForest(contamination=0.05).fit(df[[TARGET]])
+    # NOTE:
+    # On some Windows environments, parallel workers may fail with
+    # PermissionError [WinError 5] during multiprocessing pipe creation.
+    # Keeping n_jobs=1 avoids that failure and makes inference reliable.
+    rf = RandomForestRegressor(
+        n_estimators=25,
+        max_depth=10,
+        n_jobs=1,
+        random_state=42
+    ).fit(df[FEATURES], df[TARGET])
+    iso = IsolationForest(contamination=0.05, random_state=42).fit(df[[TARGET]])
 
     # Calculate medians for prediction lags
     lag_meds = {
@@ -105,7 +115,7 @@ def make_prediction(pkg, hour, dow, month, weather, junction_id, is_holiday=0):
         math.sin(2*np.pi*hour/24), math.cos(2*np.pi*hour/24),
         math.sin(2*np.pi*month/12), math.cos(2*np.pi*month/12),
         math.sin(2*np.pi*dow/7), math.cos(2*np.pi*dow/7),
-        int(hour in [8,9,18,19])*(1-int(dow>=5)), 0, 0,
+        int(hour in [8,9,18,19])*(1-int(dow>=5)), int(is_holiday or dow >= 5), 0,
         lm["lag_1h"], lm["lag_24h"], lm["lag_168h"], lm["rolling_3h"], lm["rolling_6h"]
     ]], columns=FEATURES)
     return max(0, int(pkg["rf"].predict(row)[0]))
