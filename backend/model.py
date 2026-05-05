@@ -101,8 +101,45 @@ def load_model():
         "improvement": 2.1
     }
 
-def make_prediction(pkg, hour, dow, month, weather, junction_id, is_holiday=0):
+_MODEL_PKG = None
+
+def get_model_package():
+    """Load and cache the trained in-memory model package."""
+    global _MODEL_PKG
+    if _MODEL_PKG is None:
+        _MODEL_PKG = load_model()
+    return _MODEL_PKG
+
+def _analytical_volume(hour, dow, month, weather, junction_id, is_holiday=0):
+    """Fallback used when the CSV/model stack is unavailable."""
+    season = 1.0 + 0.08 * math.sin((month - 6) * math.pi / 6)
+    if dow >= 5:
+        base = 550 * max(0, math.sin((hour - 10) * math.pi / 10)) + 80
+    else:
+        base = (
+            600 * math.exp(-((hour - 8) ** 2) / 4)
+            + 750 * math.exp(-((hour - 18) ** 2) / 3)
+            + 150 * math.exp(-((hour - 13) ** 2) / 5)
+            + 80
+        )
+
+    weather_mult = {
+        "Clear": 1.0,
+        "Clouds": 0.97,
+        "Drizzle": 0.91,
+        "Haze": 0.94,
+        "Rain": 0.82,
+        "Fog": 0.72,
+        "Thunderstorm": 0.60,
+    }.get(weather, 1.0)
+    holiday_mult = 0.72 if is_holiday else 1.0
+    return max(0, int(base * season * weather_mult * holiday_mult))
+
+def _predict_volume(pkg, hour, dow, month, weather, junction_id, is_holiday=0):
     """Real-time inference using dynamically derived package."""
+    if pkg is None:
+        return _analytical_volume(hour, dow, month, weather, junction_id, is_holiday)
+
     lm = pkg["lag_meds"].get(junction_id, next(iter(pkg["lag_meds"].values())))
     try:
         j_enc = pkg["encoders"]["junction"].transform([junction_id])[0]
@@ -120,8 +157,36 @@ def make_prediction(pkg, hour, dow, month, weather, junction_id, is_holiday=0):
     ]], columns=FEATURES)
     return max(0, int(pkg["rf"].predict(row)[0]))
 
-def classify_volume(v, thresholds):
+def make_prediction(*args, **kwargs):
+    """
+    Public prediction adapter.
+
+    Supports both the internal legacy call:
+      make_prediction(pkg, hour, dow, month, weather, junction_id, is_holiday)
+    and Flask route calls using keyword arguments.
+    """
+    if args and isinstance(args[0], dict):
+        return _predict_volume(*args, **kwargs)
+
+    pkg = kwargs.pop("pkg", None) or get_model_package()
+    hour = int(kwargs.get("hour", args[0] if len(args) > 0 else 8))
+    dow = int(kwargs.get("dow", kwargs.get("day_of_week", args[1] if len(args) > 1 else 0)))
+    month = int(kwargs.get("month", args[2] if len(args) > 2 else 3))
+    weather = str(kwargs.get("weather", args[3] if len(args) > 3 else "Clear"))
+    junction_id = str(kwargs.get("junction_id", args[4] if len(args) > 4 else "J01_DBMall"))
+    is_holiday = int(kwargs.get("is_holiday", args[5] if len(args) > 5 else 0))
+
+    return {
+        "volume": _predict_volume(pkg, hour, dow, month, weather, junction_id, is_holiday),
+        "model_ready": pkg is not None,
+    }
+
+def classify_volume(v, thresholds=None):
     """Classification based on dynamically calculated data quantiles."""
+    if thresholds is None:
+        pkg = get_model_package()
+        thresholds = pkg["thresholds"] if pkg else {"moderate": 450, "high": 950, "very_high": 1550}
+
     if v < thresholds["moderate"]:  return "LOW", "#10d97e"
     if v < thresholds["high"]:      return "MODERATE", "#f5a623"
     if v < thresholds["very_high"]: return "HIGH", "#ff4d4d"

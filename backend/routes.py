@@ -45,6 +45,21 @@ ROUTES = [
     },
 ]
 
+def get_routes():
+    """Return route metadata in the shape expected by the Flask API."""
+    return [
+        {
+            "id": route["id"],
+            "name": route["name"],
+            "short": route["short"],
+            "distance_km": route["km"],
+            "junctions": route["junctions"],
+            "waypoints": route["waypoints"],
+            "eta_min": round(route["km"] * 2.5, 1),
+        }
+        for route in ROUTES
+    ]
+
 # Multipliers per junction (how busy each road typically is)
 JUNCTION_MULT = {
     "J01_DBMall":    1.25,

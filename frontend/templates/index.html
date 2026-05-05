@@ -100,20 +100,22 @@
 
         <div class="page" id="p-pred">
             <div class="row2">
-                <div class="pnl">
+                <div class="pnl predictor-panel">
                     <div class="pnl-hd">
-                        <div class="pnl-ttl">ML Volume Predictor</div>
-                        <div class="pnl-sub">Bhopal-Specific Random Forest Engine</div>
+                        <div>
+                            <div class="pnl-ttl">ML Volume Predictor</div>
+                            <div class="pnl-sub">Bhopal-specific random forest inference</div>
+                        </div>
                     </div>
 
                     <div class="fg2">
                         <div class="fg">
                             <div class="fg-lbl">Hour <span id="lv-hr">8:00</span></div>
-                            <input type="range" min="0" max="23" value="8" id="sl-hr"/>
+                            <input type="range" min="0" max="23" value="8" id="sl-hr" />
                         </div>
                         <div class="fg">
                             <div class="fg-lbl">Temp <span id="lv-tmp">28°C</span></div>
-                            <input type="range" min="5" max="45" value="28" id="sl-tmp"/>
+                            <input type="range" min="5" max="45" value="28" id="sl-tmp" />
                         </div>
                     </div>
 
@@ -121,9 +123,12 @@
                         <div class="fg">
                             <div class="fg-lbl">Day of Week</div>
                             <select id="sel-day">
-                                <option value="0">Monday</option><option value="1">Tuesday</option>
-                                <option value="2">Wednesday</option><option value="3">Thursday</option>
-                                <option value="4">Friday</option><option value="5">Saturday</option>
+                                <option value="0">Monday</option>
+                                <option value="1">Tuesday</option>
+                                <option value="2">Wednesday</option>
+                                <option value="3">Thursday</option>
+                                <option value="4">Friday</option>
+                                <option value="5">Saturday</option>
                                 <option value="6">Sunday</option>
                             </select>
                         </div>
@@ -143,8 +148,10 @@
                     <div class="fg">
                         <div class="fg-lbl">Weather Condition</div>
                         <select id="sel-wthr">
-                            <option value="Clear">Clear</option><option value="Clouds">Cloudy</option>
-                            <option value="Rain">Rain</option><option value="Fog">Fog</option>
+                            <option value="Clear">Clear</option>
+                            <option value="Clouds">Cloudy</option>
+                            <option value="Rain">Rain</option>
+                            <option value="Fog">Fog</option>
                             <option value="Thunderstorm">Thunderstorm</option>
                         </select>
                     </div>
@@ -152,76 +159,78 @@
                     <button class="pred-btn" id="pred-btn" onclick="runPrediction()">PREDICT TRAFFIC VOLUME →</button>
 
                     <div class="result-pnl" id="result-pnl">
-                        <div style="display:flex;align-items:flex-end;gap:10px">
-                            <div class="res-vol" id="res-vol">—</div>
-                            <div class="res-unit">veh/hr</div>
+                        <div class="result-row" style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;">
+                            <div>
+                                <div class="res-vol" id="res-vol">—</div>
+                                <div class="res-unit">veh/hr</div>
+                            </div>
+                            <div class="res-tag" id="res-lvl">—</div>
                         </div>
                         <div class="tbar"><div class="tfill" id="res-fill" style="width:0%"></div></div>
-                        <div class="res-lvl" id="res-lvl"></div>
                         <div class="res-desc" id="res-desc">Based on historical repository data.</div>
                     </div>
 
-                    <div class="pnl" id="insights-pnl" style="display:none; margin-top:20px; border-top: 2px solid var(--blu); background: rgba(30,41,59,0.4);">
+                    <div class="pnl insights-panel" id="insights-pnl" style="display:none; margin-top:18px; border-top: 2px solid var(--blu); background: rgba(30,41,59,0.4);">
                         <div class="pnl-hd"><div class="pnl-ttl">AI Insights & Explainability</div></div>
                         <div class="stat-grid insight-grid" style="margin-top:10px;">
                             <div class="stat-box">
                                 <div class="stat-lbl">Exact Number</div>
-                                <div class="stat-v" id="ins-raw" style="color:var(--blu)">—</div>
+                                <div class="stat-v" id="ins-raw">—</div>
                             </div>
                             <div class="stat-box">
                                 <div class="stat-lbl">Weather Factor</div>
-                                <div id="ins-wthr" style="font-weight:bold;">—</div>
+                                <div id="ins-wthr">—</div>
                                 <small id="ins-wthr-desc">—</small>
                             </div>
                             <div class="stat-box">
                                 <div class="stat-lbl">Pattern Status</div>
-                                <div id="ins-event" style="font-weight:bold;">Normal</div>
-                                <small id="ins-event-desc">Matches Repo History</small>
+                                <div id="ins-event">Normal</div>
+                                <small id="ins-event-desc">Matches repo history</small>
                             </div>
                             <div class="stat-box">
                                 <div class="stat-lbl">Confidence</div>
-                                <div class="stat-v" id="ins-conf" style="color:var(--grn)">High</div>
-                                <small class="stat-d" id="ins-xai-details">Calculating XAI Drivers...</small>
+                                <div class="stat-v" id="ins-conf">High</div>
+                                <small class="stat-d" id="ins-xai-details">Analyzing model drivers...</small>
                             </div>
                             <div class="stat-box">
                                 <div class="stat-lbl">Accident Risk Score</div>
-                                <div class="stat-v" id="ins-risk" style="color:var(--ylw)">—</div>
-                                <small class="stat-d" id="ins-risk-desc">Risk engine not evaluated</small>
+                                <div class="stat-v" id="ins-risk">—</div>
+                                <small id="ins-risk-desc">—</small>
                             </div>
                             <div class="stat-box">
                                 <div class="stat-lbl">Hotspot Severity</div>
-                                <div class="stat-v" id="ins-hotspot" style="color:var(--red)">—</div>
-                                <small class="stat-d" id="ins-hotspot-desc">No hotspot analytics yet</small>
+                                <div class="stat-v" id="ins-hotspot">—</div>
+                                <small id="ins-hotspot-desc">—</small>
                             </div>
                             <div class="stat-box">
                                 <div class="stat-lbl">Avg Delay (Next 3h)</div>
-                                <div class="stat-v" id="ins-delay" style="color:var(--pur)">—</div>
-                                <small class="stat-d" id="ins-delay-desc">Forecast delay pending</small>
+                                <div class="stat-v" id="ins-delay">—</div>
+                                <small id="ins-delay-desc">—</small>
                             </div>
                             <div class="stat-box">
                                 <div class="stat-lbl">Emission Load Index</div>
-                                <div class="stat-v" id="ins-emission" style="color:var(--blu)">—</div>
-                                <small class="stat-d" id="ins-emission-desc">CO2 proxy not available</small>
+                                <div class="stat-v" id="ins-emission">—</div>
+                                <small id="ins-emission-desc">—</small>
                             </div>
                             <div class="stat-box">
                                 <div class="stat-lbl">Signal Optimization</div>
-                                <div class="stat-v" id="ins-signal" style="color:var(--grn)">—</div>
-                                <small class="stat-d" id="ins-signal-desc">Cycle recommendation pending</small>
+                                <div class="stat-v" id="ins-signal">—</div>
+                                <small id="ins-signal-desc">—</small>
                             </div>
                             <div class="stat-box">
                                 <div class="stat-lbl">Incident Readiness</div>
-                                <div class="stat-v" id="ins-incident" style="color:var(--ylw)">—</div>
-                                <small class="stat-d" id="ins-incident-desc">No emergency advisory yet</small>
+                                <div class="stat-v" id="ins-incident">—</div>
+                                <small id="ins-incident-desc">—</small>
                             </div>
                         </div>
-                        <div class="ins-reco-wrap">
-                            <div class="stat-lbl">AI Action Recommendations (Smart City Ops)</div>
-                            <div id="ins-reco-list" class="ins-reco-list">Run prediction to generate city actions.</div>
+                        <div class="ins-reco-wrap" style="margin-top:14px;">
+                            <div class="stat-lbl" style="margin-bottom:10px;">AI Action Recommendations (Smart City Ops)</div>
+                            <div class="ins-reco-list" id="ins-reco-list"></div>
                         </div>
                     </div>
                 </div>
 
-                <div class="pnl">
+                <div class="pnl forecast-panel">
                     <div class="pnl-hd"><div class="pnl-ttl">24-Hour Forecast Trend</div><div class="pnl-sub" id="fc-label">Select parameters</div></div>
                     <div class="cw h280"><canvas id="c-forecast"></canvas></div>
                 </div>
@@ -249,47 +258,66 @@
         </div>
 
         <div class="page" id="p-map">
-            <div class="map-shell">
-                <div class="map-side">
-                    <div class="ms-sect">
-                        <div class="ms-label">Route Context</div>
-                        <div class="srow"><span class="sdot sdot-g"></span><input class="sinp" value="DB Mall Chowk" readonly></div>
-                        <div class="srow"><span class="sdot sdot-r"></span><input class="sinp" value="MP Nagar Square" readonly></div>
+            <div class="row2" style="height:100%;gap:0;">
+                <!-- Map Container -->
+                <div id="map" style="flex:1;background:#2a3844;border-radius:8px;position:relative;"></div>
+                
+                <!-- Sidebar -->
+                <div class="pnl" id="map-sidebar" style="width:300px;display:flex;flex-direction:column;gap:15px;">
+                    <div class="pnl-hd">
+                        <div class="pnl-ttl">Real-Time Navigation</div>
+                        <div class="pnl-sub">Live Traffic & Carbon Tracking</div>
                     </div>
-                    <div class="ms-ctrl">
-                        <div class="cg"><div class="cg-l">Hour</div><select class="cs" id="map-h"><option>8</option><option>9</option><option>10</option><option>17</option><option>18</option></select></div>
-                        <div class="cg"><div class="cg-l">Day</div><select class="cs" id="map-d"><option value="0">Mon</option><option value="1">Tue</option><option value="2">Wed</option><option value="3">Thu</option><option value="4">Fri</option><option value="5">Sat</option><option value="6">Sun</option></select></div>
-                        <div class="cg"><div class="cg-l">Weather</div><select class="cs" id="map-w"><option>Clear</option><option>Clouds</option><option>Rain</option><option>Fog</option><option>Thunderstorm</option></select></div>
+
+                    <!-- Mode Toggle -->
+                    <div style="display:flex;gap:8px;background:rgba(255,255,255,0.05);padding:8px;border-radius:6px;">
+                        <button id="map-gps-btn" style="flex:1;padding:8px;border:none;border-radius:4px;background:transparent;color:#fff;cursor:pointer;font-size:12px;font-weight:bold;">📍 GPS</button>
+                        <button id="map-manual-btn" style="flex:1;padding:8px;border:none;border-radius:4px;background:var(--blu);color:#fff;cursor:pointer;font-size:12px;font-weight:bold;">✏️ Manual</button>
                     </div>
-                    <div class="ms-ctrl">
-                        <div class="cg">
-                            <div class="cg-l">Incident Level</div>
-                            <select class="cs" id="inc-severity">
-                                <option value="LOW">Low</option>
-                                <option value="MEDIUM">Medium</option>
-                                <option value="HIGH">High</option>
-                            </select>
+
+                    <!-- Manual Input Fields -->
+                    <div id="map-manual-inputs" style="display:flex;flex-direction:column;gap:10px;">
+                        <div>
+                            <div class="fg-lbl">Origin Junction</div>
+                            <input type="text" id="map-origin" placeholder="e.g., DB Mall" style="width:100%;padding:8px;border:1px solid rgba(255,255,255,0.2);border-radius:4px;background:rgba(0,0,0,0.3);color:#fff;">
                         </div>
-                        <div class="cg">
-                            <div class="cg-l">Action</div>
-                            <button class="gps-btn" id="inc-btn" onclick="reportIncident()">Report Accident</button>
+                        <div>
+                            <div class="fg-lbl">Destination Junction</div>
+                            <input type="text" id="map-destination" placeholder="e.g., MP Nagar" style="width:100%;padding:8px;border:1px solid rgba(255,255,255,0.2);border-radius:4px;background:rgba(0,0,0,0.3);color:#fff;">
+                        </div>
+                        <button id="map-go-btn" style="padding:10px;background:var(--blu);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">GET ROUTE →</button>
+                    </div>
+
+                    <!-- Alert Banner -->
+                    <div id="traffic-alert-banner" style="display:none;padding:12px;border-radius:6px;border-left:4px solid #f5a623;background:rgba(245,166,35,0.2);">
+                        <div id="traffic-alert-text" style="font-weight:bold;margin-bottom:4px;">⚠️ Traffic Alert</div>
+                        <div id="traffic-alert-desc" style="font-size:11px;opacity:0.9;">—</div>
+                    </div>
+
+                    <!-- Traffic Stats -->
+                    <div style="background:rgba(255,255,255,0.05);padding:12px;border-radius:6px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px;">
+                            <div>
+                                <div style="color:#999;margin-bottom:4px;">ETA</div>
+                                <div id="traffic-eta" style="font-weight:bold;font-size:18px;color:var(--blu);">— min</div>
+                            </div>
+                            <div>
+                                <div style="color:#999;margin-bottom:4px;">Delay</div>
+                                <div id="traffic-delay" style="font-weight:bold;font-size:18px;color:var(--ylw);">— min</div>
+                            </div>
+                            <div>
+                                <div style="color:#999;margin-bottom:4px;">CO2 Extra</div>
+                                <div id="traffic-carbon" style="font-weight:bold;font-size:14px;color:var(--red);">—g</div>
+                            </div>
+                            <div>
+                                <div style="color:#999;margin-bottom:4px;">Status</div>
+                                <div id="traffic-status" style="font-weight:bold;font-size:14px;">—</div>
+                            </div>
                         </div>
                     </div>
-                    <div class="gps-btn-wrap"><button class="gps-btn" id="gps-btn" onclick="toggleGPS()">Start GPS Navigation</button></div>
-                    <div class="alert-bar ok" id="alert-bar"><span id="alert-txt">Waiting for GPS…</span><span class="alert-dist" id="alert-dist"></span></div>
-                    <div class="ms-scroll">
-                        <div class="ms-ttl"><span>Route Recommendations</span><span id="map-meta">Mon 8:00 · Clear</span></div>
-                        <div id="map-route-cards"></div>
-                        <div class="ms-ttl"><span>Control Room Log</span></div>
-                        <div class="gps-log-scroll" id="gps-log-scroll"></div>
-                    </div>
-                    <div class="ms-foot"><span>Deviation threshold</span><span>300m</span></div>
-                </div>
-                <div id="leaflet-map"></div>
-                <div class="map-overlays">
-                    <div class="ov-card"><div class="ov-lbl">Recommended</div><div class="ov-val" id="ov-route">Route A</div></div>
-                    <div class="ov-card"><div class="ov-lbl">Predicted Volume</div><div class="ov-val" id="ov-vol">—</div></div>
-                    <div class="ov-card"><div class="ov-lbl">Estimated Time</div><div class="ov-val" id="ov-time">—</div></div>
+
+                    <div style="flex:1;"></div>
+                    <small style="color:#666;text-align:center;">Updates every 30 seconds</small>
                 </div>
             </div>
         </div>

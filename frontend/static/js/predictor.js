@@ -33,7 +33,7 @@ async function runPrediction() {
         btn.textContent = "RUNNING AI INFERENCE...";
 
         try {
-            const rt = await apiGet("/api/realtime");
+            const rt = await apiGet("/api/realtime/weather");
             if (rt?.weather) payload.weather = rt.weather;
             if (typeof rt?.temperature_c === "number") payload.temperature_c = rt.temperature_c;
         } catch (_) {}
@@ -76,20 +76,24 @@ function updatePredictorUI(data) {
     const descEl = document.getElementById("res-desc");
     const fillEl = document.getElementById("res-fill");
 
-    if (volEl) volEl.textContent = data.volume;
+    const volume = typeof data.volume === "number" ? data.volume : 0;
+    const level = data.level || "UNKNOWN";
+    const color = data.color || "#94a3b8";
+
+    if (volEl) volEl.textContent = volume;
 
     if (lvlEl) {
-        lvlEl.textContent = data.level;
-        lvlEl.style.color = data.color;
+        lvlEl.textContent = level;
+        lvlEl.style.color = color;
     }
 
     if (fillEl) {
-        const pct = Math.min(100, (data.volume / 2000) * 100);
+        const pct = Math.min(100, (volume / 2000) * 100);
         fillEl.style.width = pct + "%";
-        fillEl.style.background = data.color;
+        fillEl.style.background = color;
     }
 
-    if (descEl) descEl.textContent = `Bhopal ML Logic: Category is ${data.level} based on historical data.`;
+    if (descEl) descEl.textContent = `Bhopal ML Logic: Category is ${level} based on historical data.`;
 }
 
 function updateInsightsBox(data, forecastHours, routes) {
@@ -116,9 +120,10 @@ function updateInsightsBox(data, forecastHours, routes) {
 
     if (insRaw) insRaw.textContent = data.volume;
 
+    const weatherLabel = data?.inputs?.weather || data?.weather || "Clear";
     if (insWthr) {
-        insWthr.textContent = data.inputs.weather;
-        insWthr.style.color = ["Rain", "Fog", "Thunderstorm"].includes(data.inputs.weather) ? "#ff4d4d" : "#10d97e";
+        insWthr.textContent = weatherLabel;
+        insWthr.style.color = ["Rain", "Fog", "Thunderstorm"].includes(weatherLabel) ? "#ff4d4d" : "#10d97e";
     }
     if (insWthrD) insWthrD.textContent = data.volume > 800 ? "High resistance" : "Clear flow";
 
@@ -189,7 +194,8 @@ function buildSmartCityAnalytics(pred, forecastHours, routes) {
     const meanDayVolume = safeHours.length ? safeHours.reduce((sum, h) => sum + (h.volume || 0), 0) / safeHours.length : pred.volume;
 
     const weatherPenalty = { Clear: 0, Clouds: 4, Rain: 12, Fog: 16, Thunderstorm: 20, Drizzle: 8 };
-    const weatherHit = weatherPenalty[pred.inputs.weather] || 0;
+    const weatherLabel = pred?.inputs?.weather || pred?.weather || "Clear";
+    const weatherHit = weatherPenalty[weatherLabel] || 0;
     const peakHit = pred.is_peak ? 12 : 0;
     const anomalyHit = pred.is_anomaly ? 18 : 0;
     const saturation = Math.min(1, pred.volume / Math.max(1, thresholds.very_high));
@@ -199,7 +205,8 @@ function buildSmartCityAnalytics(pred, forecastHours, routes) {
     const congestionRatio = pred.volume / Math.max(1, thresholds.high);
     const hotspotSeverity = congestionRatio >= 1.25 ? "Critical" : congestionRatio >= 1 ? "High" : congestionRatio >= 0.7 ? "Moderate" : "Low";
     const hotspotSeverityColor = hotspotSeverity === "Critical" ? "#ff4d4d" : hotspotSeverity === "High" ? "#f5a623" : hotspotSeverity === "Moderate" ? "#4d9fff" : "#10d97e";
-    const hotspotMessage = `${pred.inputs.junction_id.replace("J0", "J").replace("_", " ")} operating at ${Math.round(congestionRatio * 100)}% load ratio`;
+    const junctionLabel = pred?.inputs?.junction_id ? pred.inputs.junction_id.replace("J0", "J").replace("_", " ") : "Selected junction";
+    const hotspotMessage = `${junctionLabel} operating at ${Math.round(congestionRatio * 100)}% load ratio`;
 
     const next3hDelayMin = Math.max(2, Math.round((next3Avg / Math.max(1, thresholds.moderate)) * 4));
     const delayMessage = next3Avg > meanDayVolume ? "Forecast above daily baseline; expect queue spillovers." : "Forecast near baseline; manageable queue lengths.";
@@ -287,5 +294,5 @@ function initPredictor() {
     const lvTmp = document.getElementById("lv-tmp");
 
     if (slHr && lvHr) slHr.oninput = () => { lvHr.textContent = `${slHr.value}:00`; };
-    if (slTmp && lvTmp) slTmp.oninput = () => { lvTmp.textContent = `${slTmp.value}°C`; };
+    if (slTmp && lvTmp) slTmp.oninput = () => { lvTmp.textContent = `${slTmp.value}ï¿½C`; };
 }

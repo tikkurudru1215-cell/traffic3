@@ -1,4 +1,4 @@
-/* ============================================================
+ï»¿/* ============================================================
    app.js - Core Logic, Tab Switching, & Shared Helpers
    ============================================================ */
 
@@ -47,7 +47,7 @@ async function apiFetch(path, opts = {}) {
     let res;
     try {
         res = await fetch(API + path, {
-            headers: { "Content-Type": "application/json" },
+            headers: { "Accept": "application/json", "Content-Type": "application/json" },
             signal: controller.signal,
             ...opts
         });
@@ -55,8 +55,24 @@ async function apiFetch(path, opts = {}) {
         clearTimeout(timeout);
     }
 
-    if (!res.ok) throw new Error(`API ${path} -> ${res.status}`);
-    return res.json();
+    const text = await res.text();
+    let data = null;
+
+    if (text) {
+        try {
+            data = JSON.parse(text);
+        } catch (_) {
+            const preview = text.slice(0, 160).replace(/\s+/g, " ");
+            throw new Error(`API ${path} returned invalid JSON (${res.status}): ${preview}`);
+        }
+    }
+
+    if (!res.ok) {
+        const message = data?.message || data?.error || `API ${path} -> ${res.status}`;
+        throw new Error(message);
+    }
+
+    return data;
 }
 
 function apiGet(path) {
@@ -104,7 +120,7 @@ window.addEventListener("DOMContentLoaded", () => {
     apiGet("/api/status")
         .then((d) => {
             const chip = document.getElementById("chip-r2");
-            if (chip && d?.r2 !== undefined) chip.textContent = `RF R²=${d.r2}`;
+            if (chip && d?.r2 !== undefined) chip.textContent = `RF R2=${d.r2}`;
         })
         .catch(() => console.warn("Backend not ready yet."));
 
@@ -116,4 +132,3 @@ window.addEventListener("DOMContentLoaded", () => {
         if (typeof initDashboard === "function") initDashboard();
     }
 });
-
